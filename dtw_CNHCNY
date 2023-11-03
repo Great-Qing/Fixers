@@ -1,0 +1,35 @@
+import pandas as pd
+import yfinance as yf
+from dtaidistance import dtw
+from dtaidistance import dtw_visualisation as dtwvis
+
+
+# Define the symbols & Data range
+cny_symbol = 'USDCNY=X'  # CNY price in USD
+cnh_symbol = 'USDCNH=X'  # CNH price in USD
+start_date = '2023-08-16'
+end_date = pd.Timestamp.today()
+
+# Fetch the historical data
+cny_data = yf.download(cny_symbol, start=start_date, end=end_date, interval='1d')
+cnh_data = pd.read_csv("USD_CNH.csv")
+
+# Average between the daily open and close prices
+avg_cny_data = (cny_data['Open'] + cny_data['Close']) / 2
+avg_cnh_data = (cnh_data['Open'] + cnh_data['Price']) / 2
+avg_cnh_data.index = cny_data.index
+
+# Display the data
+print("-----이용한 데이터-----")
+print("1.CNY :\n", avg_cny_data.head())
+print("2.CNH :\n", avg_cnh_data.head())
+print("\n")
+
+# Display the distance
+distance = dtw.distance(avg_cny_data, avg_cnh_data)
+print("-----DTW distances-----")
+print("CNY, CNH : ", distance)
+
+# Save warp image
+path = dtw.warping_path(avg_cny_data, avg_cnh_data)
+dtwvis.plot_warping(avg_cny_data, avg_cnh_data, path, filename="warp.png")
