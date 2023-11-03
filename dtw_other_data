@@ -1,0 +1,68 @@
+import pandas as pd
+import yfinance as yf
+from dtaidistance import dtw
+from dtaidistance import dtw_visualisation as dtwvis
+
+# Define Yuan symbols and date range
+cny_symbol = 'USDCNY=X'  # CNY price in USD
+cnh_symbol = 'USDCNH=X'  # CNH price in USD
+start_date = '2023-08-16'
+end_date = pd.Timestamp.today()
+
+# Define symbols of Various Data
+# List & Dictionary of Various Data
+_13w_treasury_symbol = '^IRX'
+_5y_treasury_symbol = '^FVX'
+_10y_treasury_symbol = '^TNX'
+_30y_treasury_symbol = '^TYX'
+sp500_symbol = '^GSPC'
+
+global_bond_swap = '0DZB.L' # Global Aggregate Bond Swap ETF
+EBND_symbol = 'EBND' # Emerging market government bonds
+EMLC_symbol = 'EMLC'
+HYG_symbol = 'HYG' # high yield corp bonds
+
+shanghai_gold_symbol = 'SGU=F' # Shanghai gold futures
+china_ntr_symbol = 'CHH=F' # China Net Total Return Futures
+
+data_symbol_list = [_13w_treasury_symbol, _5y_treasury_symbol, \
+_10y_treasury_symbol, _30y_treasury_symbol, sp500_symbol, \
+global_bond_swap, EBND_symbol, EMLC_symbol, HYG_symbol, \
+shanghai_gold_symbol, china_ntr_symbol, ]
+avg_data_dict = {}
+
+# Fetch historical data from yf
+# Get the average between the open and close prices of Yuan
+# Get the average between the open and close prices of Various Data
+cny_data = yf.download(cny_symbol, start=start_date, end=end_date, interval='1d')
+cnh_data = pd.read_csv("USD_CNH.csv")
+
+avg_cny_data = (cny_data['Open'] + cny_data['Close']) / 2
+avg_cnh_data = (cnh_data['Open'] + cnh_data['Price']) / 2
+avg_cnh_data.index = cny_data.index
+
+for d in data_symbol_list:
+  data = yf.download(d, start=start_date, end=end_date, interval='1d')
+  avg_data_dict[d] = (data['Open'] + data['Close']) / 2
+
+# Display the data
+print("-----위안화-----")
+print("1.CNY :\n", avg_cny_data.head())
+print("2.CNH :\n", avg_cnh_data.head())
+print("-----이용한 데이터-----")
+for i, (key,data) in enumerate(avg_data_dict.items()):
+  print(f"{i+1}.{key} :\n", data.head())
+print("\n")
+
+# Calculate and display distance between CNH and others
+print("-----DTW distances-----")
+print("CNH, CNY : ", dtw.distance(avg_cnh_data, avg_cny_data))
+for i, (key,data) in enumerate(avg_data_dict.items()):
+  print(f"{i+1}. CNH, {key} : ", dtw.distance(avg_cnh_data, data))
+
+# Generate and Save Warping Images
+path = dtw.warping_path(avg_cnh_data, avg_cny_data)
+dtwvis.plot_warping(avg_cnh_data, avg_cny_data, path, filename="warp_CNH-CNY.png")
+for i, (key,data) in enumerate(avg_data_dict.items()):
+  path = dtw.warping_path(avg_cnh_data, data)
+  dtwvis.plot_warping(avg_cnh_data, data, path, filename=f"warp_{i+1}_CNH-{key}.png")
