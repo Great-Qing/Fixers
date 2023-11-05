@@ -1,0 +1,77 @@
+import pandas as pd
+import statsmodels.api as sm
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+import numpy as np
+
+# Load data without specifying usecols
+df_y = pd.read_csv('DATALOCATION', parse_dates=[0], index_col=0).tz_localize(None)
+df_x1 = pd.read_csv('DATALOCATION', parse_dates=[0], index_col=0).tz_localize(None)
+df_x2 = pd.read_csv('DATALOCATION', parse_dates=[0], index_col=0).tz_localize(None)
+df_x3 = pd.read_csv('DATALOCATION', parse_dates=[0], index_col=0).tz_localize(None)
+df_x4 = pd.read_csv('DATALOCATION', parse_dates=[0], index_col=0).tz_localize(None)
+
+# Select relevant columns
+columns_to_select = ['open', 'high', 'low', 'close']
+
+# Select only the relevant columns and extract date part
+df_y = df_y[columns_to_select].add_suffix('_y')
+df_y.index = df_y.index.date  # Extract date part from index
+
+df_x1 = df_x1[columns_to_select].add_suffix('_x1')
+df_x1.index = df_x1.index.date  # Extract date part from index
+
+df_x2 = df_x2[columns_to_select].add_suffix('_x2')
+df_x2.index = df_x2.index.date  # Extract date part from index
+
+df_x3 = df_x3[columns_to_select].add_suffix('_x3')
+df_x3.index = df_x3.index.date  # Extract date part from index
+
+df_x4 = df_x4[columns_to_select].add_suffix('_x4')
+df_x4.index = df_x4.index.date  # Extract date part from index
+
+# Join DataFrames with explicit join type
+df = df_y.join([df_x1, df_x2, df_x3, df_x4], how='outer')
+
+# Drop rows with NaN values
+df = df.dropna()
+
+# Split the data into training and testing sets for 'open'
+X_open = df[['open_x1', 'open_x2', 'open_x3', 'open_x4']]
+y_open = df['open_y']
+X_train_open, X_test_open, y_train_open, y_test_open = train_test_split(X_open, y_open, test_size=0.2, random_state=42)
+
+# Fit Ridge Regression Model for 'open' on the training set
+alpha_open = 1.0  # Adjust the regularization strength
+ridge_model_open = Ridge(alpha=alpha_open)
+ridge_model_open.fit(X_train_open, y_train_open)
+
+# Convert the ridge model to a statsmodels OLS model
+ols_model_open = sm.OLS(y_train_open, sm.add_constant(X_train_open)).fit()
+
+# Print Regression Summary for 'open'
+print("\nRegression Summary for 'open':")
+print(ols_model_open.summary())
+# Predict 'open' values on the test set
+y_open_pred_test = ridge_model_open.predict(X_test_open)
+
+# Calculate metrics for 'open' on the test set
+mse_open_test = mean_squared_error(y_test_open, y_open_pred_test)
+rmse_open_test = np.sqrt(mse_open_test)
+mae_open_test = mean_absolute_error(y_test_open, y_open_pred_test)
+mpe_open_test = np.mean((y_test_open - y_open_pred_test) / y_test_open) * 100
+mape_open_test = np.mean(np.abs((y_test_open - y_open_pred_test) / y_test_open)) * 100
+
+# Display metrics for 'open' on the test set
+print("\nMetrics for 'open' on the test set:")
+print(f"MSE: {mse_open_test}")
+print(f"RMSE: {rmse_open_test}")
+print(f"MAE: {mae_open_test}")
+print(f"MPE: {mpe_open_test}")
+print(f"MAPE: {mape_open_test}")
+
+# Similar steps for 'high', 'low', and 'close'
+# ...
+
+# ... (repeat the process for 'high', 'low', and 'close')
